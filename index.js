@@ -3,7 +3,7 @@
  * Module dependencies.
  */
 
-var ExifReader = require('./js/ExifReader');
+var ExifReader = require('./js/ExifReader').ExifReader;
 
 /**
  * Parse EXIF tags in `buf`.
