@@ -8,7 +8,7 @@
   "main": "index.js",
   "component": {
     "scripts": {
-      "exif/js/ExifReader.js": "js/ExifReader.js"
+      "exif/js/ExifReader.js": "js/ExifReader.js",
       "exif/index.js": "index.js"
     }
   }
