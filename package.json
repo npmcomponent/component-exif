@@ -1,7 +1,7 @@
 {
   "name": "exif-component",
   "description": "Client-side EXIF parser",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "keywords": ["exif", "image", "png", "jpg", "jpeg", "meta"],
   "dependencies": {},
   "license": "MIT",

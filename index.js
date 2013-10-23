@@ -27,11 +27,17 @@ module.exports = function(buf){
 };
 
 /**
- * Convert camelcase to lowercase words
+ * Convert camel-case to lowercase words
+ *
+ * @param {String} str
+ * @return {String}
+ * @api private
  */
 
 function spaces(str) {
-  return str.replace(/([A-Z][a-z])|([A-Z])/g, function(m) {
-    return (m.length == 2) ? ' ' + m.toLowerCase() : m.toLowerCase();
-  });
+  return str.replace(/([A-Z][a-z])|([a-z][A-Z])|([A-Z])/g, function(m) {
+    return (1 == m.length)
+      ? m.toLowerCase()
+      : (m[0] == m[0].toUpperCase()) ? ' ' + m.toLowerCase() : m[0] + ' ' + m[1].toLowerCase()
+  }).replace(/^\s+|\s+$/g, '');
 }
