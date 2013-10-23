@@ -1,5 +1,5 @@
 ###
-# ExifReader 0.1
+# ExifReader 1.0.1
 # http://github.com/mattiasw/exifreader
 # Copyright (C) 2011  Mattias Wallander <mattias@wallander.eu>
 # Licensed under the GNU Lesser General Public License version 3 or later
@@ -51,16 +51,63 @@ describe 'ExifReader', ->
     @exif._littleEndian = false
     @exif._tiffHeaderOffset = 0
 
+  it 'should fail for too short data buffer', ->
+    exif = @exif
+    exif._dataView = getDataView '\x00'
+    expect(-> exif._checkImageHeader()).toThrow(new Error 'Invalid image format')
+
   it 'should accept well-formed header of JPEG image data', ->
     @exif._dataView = getDataView '\xff\xd8\xff\xe100Exif\x00\x00'
     @exif._checkImageHeader()
 
-  it 'should fail for faulty header of JPEG image data', ->
-    @exif._dataView = getDataView '\x00'
-    try
-      @exif._checkImageHeader()
-    catch error
-      expect(error).toEqual 'Invalid image format or no Exif data'
+  it 'should fail for invalid image format', ->
+    exif = @exif
+    exif._dataView = getDataView '------------'
+    expect(-> exif._checkImageHeader()).toThrow(new Error 'Invalid image format')
+
+  it 'should fail when no Exif identifier for APP1', ->
+    exif = @exif
+    exif._dataView = getDataView '\xff\xd8\xff\xe1--------'
+    expect(-> exif._checkImageHeader()).toThrow(new Error 'No Exif data')
+
+  it 'should handle APP2 markers', ->
+    @exif._dataView = getDataView '\xff\xd8\xff\xe0\x00\x07JFIF\x00\xff\xe2\x00\x07XXXX\x00\xff\xe0\x00\x07JFXX\x00\xff\xe1\x47\x11Exif\x00\x00'
+    @exif._checkImageHeader()
+    expect(@exif._tiffHeaderOffset).toEqual 39
+
+  it 'should handle JFIF APP0 markers', ->
+    @exif._dataView = getDataView '\xff\xd8\xff\xe0\x00\x07JFIF\x00\xff\xe1\x47\x11Exif\x00\x00'
+    @exif._checkImageHeader()
+    expect(@exif._tiffHeaderOffset).toEqual 21
+
+  it 'should handle JFXX APP0 markers', ->
+    @exif._dataView = getDataView '\xff\xd8\xff\xe0\x00\x07JFIF\x00\xff\xe0\x00\x07JFXX\x00\xff\xe1\x47\x11Exif\x00\x00'
+    @exif._checkImageHeader()
+    expect(@exif._tiffHeaderOffset).toEqual 30
+
+  it 'should handle unknown high ID APP markers', ->
+    @exif._dataView = getDataView '\xff\xd8\xff\xea\x00\x07XXXX\x00\xff\xe1\x47\x11Exif\x00\x00'
+    @exif._checkImageHeader()
+    expect(@exif._tiffHeaderOffset).toEqual 21
+
+  it 'should handle reversed order of JFIF-Exif hybrid', ->
+    @exif._dataView = getDataView '\xff\xd8\xff\xe1\x00\x08Exif\x00\x00\xff\xe0\x00\x07JFIF\x00'
+    @exif._checkImageHeader()
+    expect(@exif._tiffHeaderOffset).toEqual 12
+
+  it 'should fail gracefully for faulty APP markers', ->
+    exif = @exif
+    exif._dataView = getDataView '\xff\xd8\xfe\xdc\x00\x6fJFIF\x65\x01\x01\x01\x00\x48'
+    expect(->
+      exif._checkImageHeader()
+      exif._setByteOrder()
+    ).toThrow(new Error 'No Exif data')
+
+  it 'should find byte order data', ->
+    @exif._dataView = getDataView '\xff\xd8\xff\xe100Exif\x00\x00\x49\x49'
+    @exif._checkImageHeader()
+    @exif._setByteOrder()
+    expect(@exif._littleEndian).toBeTruthy()
 
   it 'should set correct byte order for litte endian data', ->
     @exif._dataView = getDataView '\x49\x49'
@@ -73,11 +120,9 @@ describe 'ExifReader', ->
     expect(@exif._littleEndian).toBeFalsy()
 
   it 'should not allow illegal byte order value', ->
-    @exif._dataView = getDataView '\x00\x00'
-    try
-      @exif._setByteOrder()
-    catch error
-      expect(error).toEqual 'Illegal byte order value. Faulty image.'
+    exif = @exif
+    exif._dataView = getDataView '\x00\x00'
+    expect(-> exif._setByteOrder()).toThrow(new Error 'Illegal byte order value. Faulty image.')
 
   it 'should correctly read offset of 0th IFD for little endian data', ->
     @exif._dataView = getDataView '\x49\x49\x00\x2a\x08\x00\x00\x00'
@@ -185,11 +230,13 @@ describe 'ExifReader', ->
     @exif._dataView = getDataView '\x47\x11\x00\x02\x00\x00\x00\x06\x00\x00\x00\x0c\x41\x42\x43\x44\x45\x00'
     expect(@exif._readTag('0th', 0).description).toEqual 'ABCDE'
 
-  it 'should throw "Undefined" for undefined tag names', ->
-    try
-      @exif.getTagDescription('MyUndefinedTagName')
-    catch error
-      expect(error).toEqual 'Undefined'
+  it 'should return undefined value for undefined tag names', ->
+    exif = @exif
+    expect(exif.getTagValue('MyUndefinedTagName')).toBeUndefined()
+
+  it 'should return undefined description for undefined tag names', ->
+    exif = @exif
+    expect(exif.getTagDescription('MyUndefinedTagName')).toBeUndefined()
 
   # Parsing tag descriptions.
 
