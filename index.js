@@ -20,7 +20,7 @@ module.exports = function(buf){
   var out = {};
 
   for(var tag in tags) {
-    out[spaces(tag)] = tags[tag].value;
+    out[spaces(tag)] = tags[tag].description;
   }
 
   return out;
